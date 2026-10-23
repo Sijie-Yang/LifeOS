@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>LifeOS</title>
+<style>
+  body { font: 14px "Segoe UI", system-ui, sans-serif; color: #27272a; margin: 16px; }
+  p { margin: 0 0 10px; white-space: pre-wrap; }
+  input { width: 100%; box-sizing: border-box; padding: 6px 8px; font: inherit; }
+  .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+  button { min-width: 72px; padding: 5px 12px; font: inherit; }
+</style>
+</head>
+<body>
+<p id="message"></p>
+<input id="value">
+<div class="buttons">
+  <button id="ok">确定</button>
+  <button id="cancel">取消</button>
+</div>
+<script>
+  const params = new URLSearchParams(location.search);
+  const input = document.getElementById("value");
+  document.getElementById("message").textContent = params.get("message") ?? "";
+  input.value = params.get("value") ?? "";
+  input.select();
+  const ok = () => window.lifeosShell.answerPrompt(input.value);
+  const cancel = () => window.lifeosShell.answerPrompt(null);
+  document.getElementById("ok").onclick = ok;
+  document.getElementById("cancel").onclick = cancel;
+  addEventListener("keydown", (e) => {
+    if (e.key === "Enter") ok();
+    if (e.key === "Escape") cancel();
+  });
+</script>
+</body>
+</html>

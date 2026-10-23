@@ -19,7 +19,7 @@
 
 ## 全新安装
 
-需要 Node.js 22.13+（建议 Node 22 LTS）、npm，以及能写入的本地磁盘。已在 macOS 验证；Linux 配置了 CI，尚未验证 Windows。
+需要 Node.js 22.13+（建议 Node 22 LTS）、npm，以及能写入的本地磁盘。已在 macOS 验证；Linux 配置了 CI；Windows 用 PowerShell 时把下面的 `cp` 换成 `copy`。
 
 ```bash
 cp .env.example .env
@@ -37,6 +37,13 @@ npm run dev
 - `db:seed` 检查全部业务表，只允许空库，不会清空已有数据。
 - **已有安装不要覆盖 `.env`，也不要执行初始化或重置命令。** 先备份，再在数据库副本中验证升级。
 - 升级到新版本时先备份，再执行 `npx prisma migrate deploy` 应用新增的迁移。
+
+### 桌面外壳
+
+不想开浏览器的话，可以用桌面外壳：主窗口、永远置顶的番茄钟 / 日程迷你窗、开机自启，服务挂了会自动拉起。两个外壳打开的都是同一套页面，数据存在本机的数据库里。
+
+- macOS：原生外壳，见 [macos/README.md](macos/README.md)（菜单栏、⌘⇧M）。
+- Windows：Electron 外壳，见 [windows/README.md](windows/README.md)（托盘、Ctrl+Shift+M）。
 
 生产模式本机运行：
 

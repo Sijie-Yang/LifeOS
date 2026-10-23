@@ -1,0 +1,36 @@
+{
+  "name": "lifeos-windows-shell",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Windows desktop shell for LifeOS: tray icon, always-on-top mini window, global shortcut, autostart.",
+  "main": "main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "44.5.1",
+    "electron-builder": "26.17.0"
+  },
+  "build": {
+    "appId": "com.lifeos.shell",
+    "productName": "LifeOS",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "prompt.html",
+      "assets/**"
+    ],
+    "win": {
+      "icon": "assets/icon.ico"
+    },
+    "portable": {
+      "artifactName": "LifeOS.exe"
+    },
+    "publish": null
+  }
+}
