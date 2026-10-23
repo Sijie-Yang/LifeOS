@@ -1,0 +1,60 @@
+{
+  "name": "lifeos",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --webpack --hostname 127.0.0.1",
+    "dev:turbo": "next dev --turbo --hostname 127.0.0.1",
+    "build": "prisma generate && next build --webpack",
+    "start": "next start --hostname 127.0.0.1",
+    "lint": "eslint",
+    "test": "TSX_TSCONFIG_PATH=tsconfig.test.json node --import tsx --test src/lib/*.test.ts",
+    "test:backup": "node --import tsx scripts/test-backup.ts",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "node --import tsx prisma/seed-demo.ts",
+    "db:reset": "prisma migrate reset",
+    "import:obsidian": "tsx scripts/import-obsidian.ts",
+    "remind:email": "tsx scripts/daily-digest.ts email",
+    "typecheck": "tsc --noEmit",
+    "db:init": "node scripts/init-database.mjs",
+    "check": "npm run typecheck && npm test && npm run lint:baseline",
+    "lint:baseline": "node scripts/check-lint.mjs",
+    "test:event-timers": "node --import tsx scripts/test-event-timers.ts",
+    "privacy:scan": "node scripts/privacy-scan.mjs",
+    "privacy:check": "node scripts/privacy-check.mjs",
+    "release:export": "bash scripts/export-public-snapshot.sh"
+  },
+  "dependencies": {
+    "@mdxeditor/editor": "^4.3.3",
+    "@prisma/client": "^6.19.3",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.4.0",
+    "lucide-react": "^1.18.0",
+    "next": "^16.4.2",
+    "prisma": "^6.19.3",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "tailwind-merge": "^3.6.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "dotenv": "^16.6.1",
+    "eslint": "^9",
+    "eslint-config-next": "^16.4.2",
+    "tailwindcss": "^4",
+    "tsx": "^4.22.4",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=22.13.0 <25"
+  },
+  "overrides": {
+    "deepmerge-ts": "^8.0.2"
+  },
+  "license": "MIT"
+}

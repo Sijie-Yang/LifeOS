@@ -1,0 +1,997 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model ContactCategory {
+  id        String    @id @default(cuid())
+  name      String
+  color     String    @default("#6366f1")
+  createdAt DateTime  @default(now())
+  contacts  Contact[]
+}
+
+model Contact {
+  id                   String           @id @default(cuid())
+  name                 String
+  email                String?
+  phone                String?
+  company              String?
+  position             String?
+  categoryId           String?
+  category             ContactCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  lastContactAt        DateTime?
+  contactFrequencyDays Int              @default(30)
+  birthday             DateTime?
+  notes                String?
+  tags                 String           @default("[]")
+  importance           Int              @default(3)
+  institution          String?
+  city                 String?
+  responseLevel        Int?
+  /// 关系契合度（「约会对象」圈子）：{ stage, scores, source, updatedAt, history }，见 src/lib/partner-score.ts
+  partnerProfile       String?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  logs                 ContactLog[]
+  projects             ProjectContact[]
+  goals                GoalContact[]
+  meetingAttendees     MeetingAttendee[]
+  referredMeetings     Meeting[]        @relation("MeetingReferrer")
+  travelCompanions     TravelCompanion[]
+  tasks                TaskItem[]
+  opportunities        OpportunityContact[]
+  checklistRuns        ChecklistRun[]
+}
+
+model ContactLog {
+  id          String   @id @default(cuid())
+  contactId   String
+  contact     Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  type        String   @default("message")
+  content     String?
+  contactedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+}
+
+model ProjectCategory {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  color     String    @default("#6366f1")
+  createdAt DateTime  @default(now())
+  projects  Project[]
+}
+
+model Project {
+  id          String             @id @default(cuid())
+  name        String
+  description String?
+  status      String             @default("PLANNING")
+  priority    String             @default("MEDIUM")
+  startDate   DateTime?
+  targetDate  DateTime?
+  completedAt DateTime?
+  progress    Int                @default(0)
+  sortOrder   Int                @default(0)
+  pinned      Boolean            @default(false)
+  tags        String             @default("[]")
+  categoryId  String?
+  category    ProjectCategory?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  ideaDate    DateTime?
+  archiveDate DateTime?
+  wishFinishTime String?
+  goalId      String?
+  goal        LifeGoal?          @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  /// 手动选入的九力（null = 不属于任何一力）
+  power          String?
+  planActive     Boolean         @default(false)
+  planWorkdays   String          @default("[1,2,3,4,5]")
+  planAnchorDate String?
+  planSkipDates  String          @default("[]")
+  planExtraDates String          @default("[]")
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  milestones  ProjectMilestone[]
+  linkedAsSubProject ProjectMilestone[] @relation("SubProjectMilestone")
+  contacts    ProjectContact[]
+  habits      Habit[]
+  notes       Note[]
+  transactions Transaction[]
+  meetings    Meeting[]
+  travels     Travel[]
+  tasks       TaskItem[]
+  opportunities Opportunity[]
+  libraryDocs LibraryDocumentProject[]
+  keyResults  GoalKeyResultProject[]
+  planSteps   ProjectPlanStep[]
+  checklistRuns ChecklistRun[]
+}
+
+model ProjectPlanStep {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  sortOrder   Int      @default(0)
+  title       String
+  detail      String?
+  estMinutes  Int?
+  milestoneId String?
+  isMilestone Boolean  @default(false)
+  done        Boolean  @default(false)
+  doneDate    String?
+  /// 全局组合排程：未完成步骤的计划日期
+  scheduledDate String?
+  /// 闭环反馈：做完后观察到什么
+  feedback    String?
+  /// 闭环修正：下一轮改什么
+  correction  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId, sortOrder])
+  @@index([scheduledDate])
+}
+
+model ProjectMilestone {
+  id             String    @id @default(cuid())
+  projectId      String
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title          String
+  dueDate        DateTime?
+  completed      Boolean   @default(false)
+  sortOrder      Int       @default(0)
+  childProjectId String?   @unique
+  childProject   Project?  @relation("SubProjectMilestone", fields: [childProjectId], references: [id], onDelete: SetNull)
+  createdAt      DateTime  @default(now())
+
+  @@unique([projectId, childProjectId])
+}
+
+model ProjectContact {
+  id        String  @id @default(cuid())
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  contactId String
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  role      String?
+
+  @@unique([projectId, contactId])
+}
+
+model Habit {
+  id          String          @id @default(cuid())
+  name        String
+  description String?
+  projectId   String?
+  project     Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  frequency    String          @default("DAILY")
+  scheduleMode String          @default("none") // none | weekly | monthly
+  daysOfWeek   String          @default("[1,2,3,4,5,6,0]")
+  monthDays    String          @default("[1]")
+  startTime    String?
+  endTime      String?
+  color       String          @default("#10b981")
+  minimumVersion String?
+  cue         String?
+  isActive    Boolean         @default(true)
+  /// 九力归属（锁定）：clean | vitality | calm | learning | influence | action | social | link | organize | base（生活底盘）
+  power       String?
+  sortOrder   Int             @default(0)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  checkIns    HabitCheckIn[]
+  schedules   ScheduleBlock[]
+  pomodoroSessions PomodoroSession[]
+  dayScheduleBlocks DayScheduleBlock[]
+}
+
+model PomodoroSession {
+  id              String   @id @default(cuid())
+  habitId         String
+  habit           Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  date            String
+  plannedMinutes  Int      @default(25)
+  actualMinutes   Int?
+  distractions    Int      @default(0)
+  breakQuality    Int?
+  preEnergy       Int?
+  startedAt       DateTime
+  endedAt         DateTime?
+  status          String   @default("running") // running | completed | cancelled
+  createdAt       DateTime @default(now())
+
+  @@index([habitId, date])
+  @@index([date])
+}
+
+model HabitCheckIn {
+  id          String   @id @default(cuid())
+  habitId     String
+  habit       Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  date        String
+  completed   Boolean  @default(true)
+  level       String?  // full | minimum | skip
+  note        String?
+  completedAt DateTime @default(now())
+
+  @@unique([habitId, date])
+}
+
+model ScheduleBlock {
+  id          String  @id @default(cuid())
+  title       String
+  description String?
+  dayOfWeek   Int
+  startTime   String
+  endTime     String
+  color       String  @default("#6366f1")
+  habitId     String?
+  habit       Habit?  @relation(fields: [habitId], references: [id], onDelete: SetNull)
+  goalId      String?
+  goal        LifeGoal? @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  isActive    Boolean @default(true)
+  sortOrder   Int     @default(0)
+}
+
+model DayScheduleBlock {
+  id              String         @id @default(cuid())
+  date            String
+  title           String
+  description     String?
+  startTime       String
+  endTime         String
+  color           String         @default("#6366f1")
+  taskId          String?
+  task            TaskItem?      @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  goalId          String?
+  goal            LifeGoal?      @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  habitId         String?
+  habit           Habit?         @relation(fields: [habitId], references: [id], onDelete: SetNull)
+  scheduleBlockId String?
+  skipped         Boolean        @default(false)
+  sortOrder       Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([date, scheduleBlockId])
+  @@index([date, startTime])
+}
+
+model Note {
+  id          String         @id @default(cuid())
+  title       String
+  content     String?
+  type        String         @default("note")
+  readingTag  String?
+  projectId   String?
+  project   Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  pinned    Boolean        @default(false)
+  sortOrder Int            @default(0)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  tasks     TaskItem[]
+  dailyLogs DailyLog[]
+}
+
+/// 精品文献库（与 Info Reading 无关）；文件在外部 Reading Library 目录，DB 只存元数据与多项目链接
+model LibraryDocument {
+  id           String                   @id @default(cuid())
+  title        String
+  authors      String?
+  year         String?
+  kind         String                   @default("paper") // paper | book | article | slides | other
+  status       String                   @default("to_read") // to_read | reading | done
+  relativePath String?                  // 相对 READING_LIBRARY_ROOT
+  sourceUrl    String?
+  doi          String?
+  whySelected  String?                  // 为何算精品（必填气质）
+  notes        String?                  // 读后笔记 markdown
+  tags         String                   @default("[]")
+  pinned       Boolean                  @default(false)
+  createdAt    DateTime                 @default(now())
+  updatedAt    DateTime                 @updatedAt
+  projects     LibraryDocumentProject[]
+
+  @@index([status])
+  @@index([relativePath])
+}
+
+model LibraryDocumentProject {
+  id         String          @id @default(cuid())
+  documentId String
+  document   LibraryDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  projectId  String
+  project    Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  role       String?         // related | benchmark | method | thesis
+
+  @@unique([documentId, projectId])
+  @@index([projectId])
+}
+
+model LifeGoal {
+  id             String          @id @default(cuid())
+  title          String
+  description    String?
+  area           String          @default("career")
+  horizon        String          @default("1y")
+  status         String          @default("ACTIVE")
+  progress       Int             @default(0)
+  targetDate     DateTime?
+  budgetAmount   Float?
+  budgetCurrency String?
+  whyItMatters   String?
+  resourceNote   String?
+  sortOrder      Int             @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  keyResults     GoalKeyResult[]
+  projects       Project[]
+  contacts       GoalContact[]
+  scheduleBlocks   ScheduleBlock[]
+  dayScheduleBlocks DayScheduleBlock[]
+  directTasks      TaskItem[]
+  opportunities    Opportunity[]
+}
+
+model GoalContact {
+  id        String   @id @default(cuid())
+  goalId    String
+  goal      LifeGoal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  contactId String
+  contact   Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  role      String?
+
+  @@unique([goalId, contactId])
+}
+
+model GoalKeyResult {
+  id        String                  @id @default(cuid())
+  goalId    String
+  goal      LifeGoal                @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  title     String
+  completed Boolean                 @default(false)
+  sortOrder Int                     @default(0)
+  createdAt DateTime                @default(now())
+  projects  GoalKeyResultProject[]
+}
+
+model GoalKeyResultProject {
+  id          String        @id @default(cuid())
+  keyResultId String
+  keyResult   GoalKeyResult @relation(fields: [keyResultId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([keyResultId, projectId])
+}
+
+model Achievement {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  title       String
+  description String
+  icon        String    @default("🏆")
+  category    String    @default("general")
+  unlockedAt  DateTime?
+}
+
+model TimelineOverride {
+  id        String   @id @default(cuid())
+  source    String
+  sourceId  String
+  title     String?
+  detail    String?
+  startDate String?
+  endDate   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([source, sourceId])
+}
+
+model FinanceAccount {
+  id           String              @id @default(cuid())
+  name         String
+  type         String              @default("cash")
+  balance      Float               @default(0)
+  currency     String              @default("CNY")
+  color        String              @default("#6366f1")
+  isActive     Boolean             @default(true)
+  sortOrder    Int                 @default(0)
+  createdAt            DateTime            @default(now())
+  transactionsFrom     Transaction[]       @relation("TxFrom")
+  transactionsTo       Transaction[]       @relation("TxTo")
+  holdings             InvestmentHolding[]
+  investmentAdjustments InvestmentAdjustment[]
+}
+
+model FinanceSettings {
+  id                  String   @id @default("default")
+  baseCurrency        String   @default("CNY")
+  investmentPolicy    String?
+  financeAccessLimit  Int      @default(7)
+  updatedAt           DateTime @updatedAt
+}
+
+model AppSettings {
+  id                    String   @id @default("default")
+  bedtimeTarget         String?  // HH:mm
+  windDownChecklist     String   @default("[\"收衣服\",\"放下手机\",\"调暗灯光\"]")
+  /// 截止日邮件提醒收件人
+  reminderEmail         String?
+  /// 是否启用任务/机会邮件提醒
+  emailRemindersEnabled Boolean  @default(false)
+  /// 提前几天提醒，JSON 数组，如 [14,7,3,1,0]
+  emailRemindDays       String   @default("[14,7,3,1,0]")
+  updatedAt             DateTime @updatedAt
+}
+
+model FinanceAccessLog {
+  id         String   @id @default(cuid())
+  accessedAt DateTime @default(now())
+  date       String
+
+  @@index([date])
+}
+
+model ExchangeRate {
+  id         String   @id @default(cuid())
+  currency   String   @unique
+  rateToBase Float
+  updatedAt  DateTime @updatedAt
+}
+
+model InvestmentHolding {
+  id             String                   @id @default(cuid())
+  type           String
+  symbol         String
+  name           String
+  shares         Float
+  avgCost        Float
+  currentPrice   Float
+  currency       String                   @default("CNY")
+  priceUpdatedAt DateTime?
+  accountId      String?
+  account        FinanceAccount?          @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  notes          String?
+  isActive       Boolean                  @default(true)
+  sortOrder      Int                      @default(0)
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  priceHistory   InvestmentPriceHistory[]
+  adjustments    InvestmentAdjustment[]
+}
+
+model InvestmentAdjustment {
+  id            String            @id @default(cuid())
+  holdingId     String
+  holding       InvestmentHolding @relation(fields: [holdingId], references: [id], onDelete: Cascade)
+  type          String            // buy | sell | price
+  shares        Float             // buy/sell 的份额（正数）；price 时为 0
+  price         Float             // 成交价或新现价
+  amount        Float             // shares * price（price 类型为 0）
+  date          String
+  note          String?
+  reason        String?
+  emotion       String?
+  accountId     String?
+  account       FinanceAccount?   @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  transactionId String?           @unique
+  createdAt     DateTime          @default(now())
+
+  @@index([holdingId, date])
+}
+
+model InvestmentPriceHistory {
+  id        String            @id @default(cuid())
+  holdingId String
+  holding   InvestmentHolding @relation(fields: [holdingId], references: [id], onDelete: Cascade)
+  date      String
+  price     Float
+
+  @@unique([holdingId, date])
+}
+
+model WealthSnapshot {
+  id              String   @id @default(cuid())
+  date            String   @unique
+  netWorth        Float
+  cashTotal       Float
+  investmentTotal Float
+  baseCurrency    String   @default("CNY")
+  breakdown       String   @default("{}")
+  note            String?
+  createdAt       DateTime @default(now())
+}
+
+model FinanceCategory {
+  id           String        @id @default(cuid())
+  name         String
+  type         String
+  color        String        @default("#6366f1")
+  budget       Float?
+  sortOrder    Int           @default(0)
+  transactions Transaction[]
+}
+
+model Transaction {
+  id          String           @id @default(cuid())
+  accountId   String
+  account     FinanceAccount   @relation("TxFrom", fields: [accountId], references: [id], onDelete: Cascade)
+  toAccountId String?
+  toAccount   FinanceAccount?  @relation("TxTo", fields: [toAccountId], references: [id], onDelete: SetNull)
+  categoryId  String?
+  category    FinanceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  amount      Float
+  type        String
+  date        String
+  description String?
+  projectId   String?
+  project     Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model WeeklyReview {
+  id              String   @id @default(cuid())
+  weekStart       String   @unique
+  wins            String?
+  improvements    String?
+  nextFocus       String?
+  goalReflections String   @default("[]")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model PeriodReview {
+  id              String   @id @default(cuid())
+  periodType      String
+  periodKey       String
+  wins            String?
+  improvements    String?
+  nextFocus       String?
+  goalReflections String   @default("[]")
+  statsSnapshot   String   @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([periodType, periodKey])
+}
+
+model Opportunity {
+  id          String               @id @default(cuid())
+  title       String
+  /// career = 职业/科研窗口；life = 业余 Networking / 丰富生活
+  lane        String               @default("career")
+  category    String               @default("Other")
+  status      String               @default("Watching")
+  priority    String               @default("MEDIUM")
+  deadline    String?
+  source      String?
+  nextAction  String?
+  /// 今日推进标记：YYYY-MM-DD = 今天点了「推进」；undo:YYYY-MM-DD = 今天取消了推进（九力 · 机会力用）
+  pushedDate  String?
+  notes       String?
+  /// 纳入邮件截止提醒（需全局开启 emailRemindersEnabled）
+  emailRemind Boolean              @default(true)
+  projectId   String?
+  project     Project?             @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  goalId      String?
+  goal        LifeGoal?            @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  contacts    OpportunityContact[]
+
+  @@index([deadline])
+  @@index([status])
+  @@index([lane])
+}
+
+model OpportunityContact {
+  id            String      @id @default(cuid())
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  contactId     String
+  contact       Contact     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  role          String?
+
+  @@unique([opportunityId, contactId])
+}
+
+model Meeting {
+  id            String            @id @default(cuid())
+  title         String
+  category      String            @default("Other")
+  status        String            @default("Scheduled")
+  priority      String            @default("MEDIUM")
+  meetingDate   String
+  meetingTime   String?
+  timezone      String            @default("GMT+8")
+  durationMin   String?
+  meetingFormat String?
+  location      String?
+  purpose       String?
+  content       String?
+  logDate       String?
+  projectId     String?
+  project       Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  referrerId    String?
+  referrer      Contact?          @relation("MeetingReferrer", fields: [referrerId], references: [id], onDelete: SetNull)
+  obsidianPath  String?           @unique
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  attendees     MeetingAttendee[]
+  tasks         TaskItem[]
+}
+
+model MeetingAttendee {
+  id        String  @id @default(cuid())
+  meetingId String
+  meeting   Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  contactId String
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([meetingId, contactId])
+}
+
+model Travel {
+  id           String            @id @default(cuid())
+  title        String
+  category     String            @default("Leisure")
+  status       String            @default("Planned")
+  priority     String            @default("MEDIUM")
+  startDate    String
+  endDate      String?
+  destination  String?
+  timezone     String            @default("GMT+8")
+  purpose      String?
+  content      String?
+  projectId    String?
+  project      Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  obsidianPath String?           @unique
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  companions   TravelCompanion[]
+  checklistRuns ChecklistRun[]
+}
+
+model TravelCompanion {
+  id        String  @id @default(cuid())
+  travelId  String
+  travel    Travel  @relation(fields: [travelId], references: [id], onDelete: Cascade)
+  contactId String
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([travelId, contactId])
+}
+
+model TaskItem {
+  id            String    @id @default(cuid())
+  title         String
+  completed     Boolean   @default(false)
+  dueDate       String?
+  scheduledDate String?
+  priority      String    @default("MEDIUM")
+  cancelled     Boolean   @default(false)
+  /// 纳入邮件截止提醒（需全局开启 emailRemindersEnabled）
+  emailRemind   Boolean   @default(true)
+  projectId     String?
+  project       Project?  @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  goalId        String?
+  goal          LifeGoal? @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  contactId     String?
+  contact       Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  meetingId     String?
+  meeting       Meeting?  @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  noteId        String?
+  note          Note?     @relation(fields: [noteId], references: [id], onDelete: SetNull)
+  completedAt   DateTime?
+  sortOrder     Int       @default(0)
+  source        String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  dayScheduleBlocks DayScheduleBlock[]
+}
+
+model DailyLog {
+  id           String    @id @default(cuid())
+  date         String    @unique
+  content      String?
+  noteId       String?
+  note         Note?     @relation(fields: [noteId], references: [id], onDelete: SetNull)
+  obsidianPath String?   @unique
+  mustDo       String    @default("[]")
+  closedAt     DateTime?
+  closeNote    String?
+  energy       Int?
+  mood         Int?
+  /// 由昨晚就寝和今早起床算出的睡眠时长，小时
+  sleepHours   Float?
+  /// 早上精力，1–5
+  energyMorning Int?
+  /// 早上内耗，1–5，越高越耗
+  drainMorning  Int?
+  /// 旧的睡眠打分，不再使用。时长写在 sleepHours
+  sleepScore    Int?
+  /// 早上标记的起床时间，HH:mm
+  wakeTime          String?
+  /// 计划睡眠，HH:mm。没填时界面默认 21:30
+  plannedSleepTime  String?
+  /// 当日就寝时间，HH:mm。没填时界面默认 21:30。次日用来和起床时间算睡眠时长
+  sleepTime         String?
+  /// 半小时时间块填色，{"HH:mm": categoryId}
+  timeFills         String   @default("{}")
+  /// 早上冲动强度，1–5（「冲动 · 转化」）
+  urgeMorning   Int?
+  /// 晚上精力，1–5
+  energyEvening Int?
+  /// 晚上内耗，1–5，越高越耗
+  drainEvening  Int?
+  reflection   String?
+  /// 记录段的批注：{"step:<id>": "多做了… / 没做的原因"}，key 为 step / task / habit 加 id
+  recordNotes  String    @default("{}")
+  /// 计划外多做的事：[{"id": "…", "title": "…"}]
+  recordExtras String    @default("[]")
+  /// 计划完成度 0–100，复盘时由 Claude 打分（set_day_score）
+  planScore    Int?
+  /// 打分理由 + 审查结论 + 明天的改进
+  planScoreNote String?
+  weightKg     Float?
+  /// 当天运动开始时间，HH:mm（看运动习惯是否固定）
+  exerciseStartTime String?
+  /// 当天健身 / 运动时长，分钟
+  exerciseMinutes  Int?
+  /// 当天运动消耗，千卡
+  exerciseCalories Int?
+  waistCm      Float?
+  bodyNote     String?
+  /// 房间平面图：按日的分区清洁打分 {"bed": 1, "desk": 3, …}，1 乱 … 5 净
+  roomZones    String    @default("{}")
+  /// 房间清洁策略里今天打勾的分区（["bed", …]），打勾即该分区清过一次
+  roomDone     String    @default("[]")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model WeeklyPlan {
+  id          String   @id @default(cuid())
+  weekStart   String   @unique
+  intention   String?
+  priorities  String   @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model DailyPlan {
+  id          String   @id @default(cuid())
+  date        String   @unique
+  intention   String?
+  priorities  String   @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model NudgeLog {
+  id     String   @id @default(cuid())
+  key    String
+  date   String
+  sentAt DateTime @default(now())
+
+  @@unique([key, date])
+}
+
+model UrgeCategory {
+  id        String      @id @default(cuid())
+  name      String
+  color     String      @default("#f97316")
+  isPrivate Boolean     @default(false)
+  goal      String?
+  sortOrder Int         @default(0)
+  isActive  Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  events    UrgeEvent[]
+}
+
+model UrgeEvent {
+  id         String       @id @default(cuid())
+  categoryId String
+  category   UrgeCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  occurredAt DateTime     @default(now())
+  intensity  Int          @default(3)
+  trigger    String?
+  outcome    String       // surfed | gave_in | redirected
+  /// 转移方式：cold_shower | exercise | outside | work（outcome = redirected 时）
+  redirect   String?
+  note       String?
+  date       String
+
+  @@index([categoryId, date])
+  @@index([date])
+}
+
+model ObsidianImport {
+  id         String   @id @default(cuid())
+  path       String   @unique
+  entityType String
+  entityId   String
+  importedAt DateTime @default(now())
+}
+
+model LifeStrategyMeta {
+  id              String   @id @default("default")
+  northStar       String?
+  decisionFilter  String?
+  operatingSystem String?
+  updatedAt       DateTime @updatedAt
+}
+
+model LifeStrategyPhase {
+  id        String   @id @default(cuid())
+  title     String
+  summary   String?
+  status    String   @default("planned") // planned | active | completed | revised
+  startDate String?
+  endDate   String?
+  timeSplit String   @default("{}")
+  priorities String  @default("[]")
+  doList    String   @default("[]")
+  dontList  String   @default("[]")
+  content   String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  entries   LifeStrategyEntry[]
+}
+
+model LifeStrategyEntry {
+  id        String             @id @default(cuid())
+  phaseId   String?
+  phase     LifeStrategyPhase? @relation(fields: [phaseId], references: [id], onDelete: SetNull)
+  date      String
+  title     String
+  content   String
+  source    String?
+  tags      String             @default("[]")
+  sortOrder Int                @default(0)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@index([date])
+}
+
+model HealthTip {
+  id        String   @id @default(cuid())
+  category  String   @default("body")
+  title     String
+  content   String
+  pinned    Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category, sortOrder])
+}
+
+/// 生活记录（照片优先）：阅读 / 研究 / 身材气质 / 社交
+model LifeRecord {
+  id           String   @id @default(cuid())
+  /// YYYY-MM-DD
+  date         String
+  /// reading | research | body | social
+  domain       String
+  title        String
+  content      String?
+  /// 相对 LIFE_RECORDS_ROOT 的路径；可空（纯文字记录）
+  photoPath    String?
+  photoMime    String?
+  /// 结构化补充：章节、论文名、体重、地点等 JSON
+  meta         String   @default("{}")
+  pinned       Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([date, domain])
+  @@index([domain, createdAt])
+  @@index([pinned, date])
+}
+
+/// 厨艺菜单库：菜谱与做法（长期能力，独立于 Health tips）
+model Recipe {
+  id              String   @id @default(cuid())
+  title           String
+  /// weekday | weekend | mealprep | guest | other
+  scene           String   @default("weekday")
+  durationMinutes Int?
+  servings        Int?
+  /// 1–3
+  difficulty      Int      @default(1)
+  ingredients     String   @default("")
+  steps           String   @default("")
+  review          String   @default("")
+  /// 是否进入每周轮换
+  inRotation      Boolean  @default(false)
+  /// 1=周一 … 7=周日；可空
+  rotationDay     Int?
+  wantToLearn     Boolean  @default(false)
+  pinned          Boolean  @default(false)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([inRotation, rotationDay])
+  @@index([wantToLearn, sortOrder])
+  @@index([scene, sortOrder])
+}
+
+/// 可复用 SOP 清单模板（旅游 / 表达好感 / 论文 / 项目 / 全屋整理…）
+model ChecklistTemplate {
+  id          String         @id @default(cuid())
+  /// travel | approach | paper | project | clean | other
+  category    String
+  title       String
+  description String?
+  color       String         @default("#6366f1")
+  sortOrder   Int            @default(0)
+  /// [{ "id", "text", "group"? }]
+  items       String         @default("[]")
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  runs        ChecklistRun[]
+
+  @@index([category, sortOrder])
+}
+
+/// 某次按模板开出的清单实例（历史可回看）
+model ChecklistRun {
+  id          String            @id @default(cuid())
+  templateId  String
+  template    ChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  title       String
+  /// active | done | archived
+  status      String            @default("active")
+  notes       String?
+  /// 快照 [{ "id", "text", "group"?, "done", "doneAt"? }]
+  items       String            @default("[]")
+  projectId   String?
+  project     Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  travelId    String?
+  travel      Travel?           @relation(fields: [travelId], references: [id], onDelete: SetNull)
+  contactId   String?
+  contact     Contact?          @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  completedAt DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([templateId, createdAt])
+  @@index([status, updatedAt])
+}
+
+// Event timers retain source snapshots so historical records survive source deletion.
+model EventTimer {
+  id              String   @id @default(cuid())
+  eventId         String
+  eventKind       String
+  title           String
+  href            String
+  projectName     String?
+  category        String
+  autoAllocate    Boolean  @default(true)
+  mode            String   @default("fixed")
+  durationSeconds Int?
+  status          String   @default("running")
+  activeKey       String?  @unique
+  startedAt       DateTime
+  runningSince    DateTime?
+  endedAt         DateTime?
+  segments        String   @default("[]")
+  updatedAt       DateTime @updatedAt
+
+  @@index([startedAt])
+  @@index([status])
+}

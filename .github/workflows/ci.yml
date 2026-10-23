@@ -1,0 +1,30 @@
+name: LifeOS checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: file:./ci.db?connection_limit=1
+      LIFEOS_AGENT_ACTIVITY: '0'
+      EMAIL_DRY_RUN: '1'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run privacy:scan
+      - run: npx prisma generate
+      - run: npm run db:init
+      - run: npm run db:seed
+      - run: npm run check
+      - run: npm run test:backup
+      - run: npm run test:event-timers
+      - run: npm run build

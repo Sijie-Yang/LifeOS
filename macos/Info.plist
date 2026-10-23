@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key>
+  <string>LifeOS</string>
+  <key>CFBundleDisplayName</key>
+  <string>LifeOS</string>
+  <key>CFBundleIdentifier</key>
+  <string>com.lifeos.shell</string>
+  <key>CFBundleExecutable</key>
+  <string>LifeOS</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>0.1.0</string>
+  <key>CFBundleVersion</key>
+  <string>1</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>13.0</string>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+  <key>NSDocumentsFolderUsageDescription</key>
+  <string>LifeOS 需要读取「文稿」里的 LifeOS 仓库，在后台启动本地服务（不再开 Terminal）。</string>
+  <key>NSAppTransportSecurity</key>
+  <dict>
+    <key>NSAllowsLocalNetworking</key>
+    <true/>
+  </dict>
+  <!-- Repo the app starts the server from; build.sh fills it in. Override with
+       `defaults write com.lifeos.shell RepoPath /path/to/repo`. -->
+  <key>LifeOSRepoPath</key>
+  <string>__REPO_PATH__</string>
+</dict>
+</plist>

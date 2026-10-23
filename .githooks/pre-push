@@ -1,0 +1,4 @@
+#!/bin/sh
+# Blocks a push when the committed tree contains private data (see scripts/privacy-check.mjs).
+# Enable once per clone: git config core.hooksPath .githooks
+exec node scripts/privacy-check.mjs HEAD

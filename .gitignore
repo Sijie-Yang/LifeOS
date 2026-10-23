@@ -1,0 +1,73 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+/src/generated/prisma
+
+# sqlite (dev DB writes trigger file watchers / HMR loops)
+# Any SQLite database, journal or copy (e.g. dev.db.bak-20261017) holds personal data.
+*.db
+*.db-*
+*.db.*
+
+# LifeOS photo records (local FS)
+/data/life-records/
+
+# Local records, exports and development audit artifacts
+/backups/
+/data/
+/artifacts/
+*.sqlite
+*.sqlite3
+.env.local.*
+!.env.example
+
+# Local-only scratch copies
+.bot-integration-backup/
+
+# Personal terms for scripts/privacy-scan.mjs (never commit)
+.privacy-denylist
+
+# Personal overlay: your own content, scripts and docs (see docs/private-overlay.md).
+# Never committed; the public repo only carries the neutral defaults in src/.
+/private/
+CLAUDE.local.md
+.privacy-allowlist
