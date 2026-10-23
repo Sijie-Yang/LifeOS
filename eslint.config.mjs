@@ -14,7 +14,14 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Personal overlay (git-ignored, see docs/private-overlay.md); lint covers the public code.
     "private/**",
+    // Packaged Windows shell output.
+    "windows/dist/**",
   ]),
+  // The Electron shell (windows/) is plain CommonJS, as Electron main and preload scripts load it.
+  {
+    files: ["windows/**/*.js"],
+    rules: { "@typescript-eslint/no-require-imports": "off" },
+  },
 ]);
 
 export default eslintConfig;
